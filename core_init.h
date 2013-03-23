@@ -22,7 +22,6 @@
 		time_t rehash_time;
 		unsigned int rehash_count;
 		
-		char auth;
 		int sockfd;
 		
 		ssl_socket_t ssl;

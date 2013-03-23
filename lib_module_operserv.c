@@ -44,12 +44,20 @@
 #include "lib_module_operserv.h"
 
 void operserv_query(nick_t *nick, char *data) {
+	char query[4096];
+	
 	if(admin_check(nick->nick, nick->host)) {
 		printf("[+] admin: <%s> request: <%s>\n", nick->nick, data);
 		
 		// skipping stat commands
 		if(!strncasecmp(data, "stat", 4))
 			return;
+		
+		if(!strncasecmp(data, "global ", 7)) {
+			zsnprintf(query, ":OperServ NOTICE $* :[%s] %s", nick->nick, data + 7);
+			raw_socket(query);
+			return;
+		}
 			
 		raw_socket(data);
 		

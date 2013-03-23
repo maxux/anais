@@ -199,6 +199,18 @@ cmodes_t chan_cmode_parse(channel_t *channel, char *modes, char *argv[]) {
 	return channel->cmodes;
 }
 
+// check if a mode is already set on channel->user
+int chan_nickmode_isset(channel_t *channel, char *nick, char mode) {
+	nick_light_t *nicklight;
+	
+	if(!(nicklight = list_search(channel->nicks, nick))) {
+		fprintf(stderr, "[-] nick not found\n");
+		return 0;
+	}
+	
+	return nicklight->modes & chan_cumode(mode);
+}
+
 // change (multiple) modes on same user
 void chan_cmode_single_edit(channel_t *channel, char *flags, char *user) {
 	char *argv[256], list[2048], temp[2048];
@@ -210,7 +222,8 @@ void chan_cmode_single_edit(channel_t *channel, char *flags, char *user) {
 	printf("[ ] cmode: user: %s\n", user);
 	
 	for(i = 1, argc = 0; i <= strlen(flags) - 1; i++) {
-		if(strchr(__cumodes_list, flags[i])) {
+		// set flags to list if not already set
+		if(strchr(__cumodes_list, flags[i]) && !chan_nickmode_isset(channel, user, flags[i])) {
 			printf("[ ] cmode: appending %s for %c (argc: %d)\n", user, flags[i], argc);
 			argv[argc++] = user;
 			
@@ -218,6 +231,9 @@ void chan_cmode_single_edit(channel_t *channel, char *flags, char *user) {
 			strcat(list, " ");
 		}
 	}
+	
+	if(!*list)
+		return;
 	
 	zsnprintf(temp, "MODE %s %s %s", channel->channel, flags, list);
 	raw_socket(temp);
@@ -259,8 +275,11 @@ void chan_new(char *request) {
 	
 	// loading data from database if exists
 	if(chanserv_chan_exists(channel->channel)) {
-		printf("[+] chan/new: loading saved state\n");
-		chanserv_load(channel);
+		// skipping reset during load
+		if(global_lib.sync) {
+			printf("[+] chan/new: loading saved state\n");
+			chanserv_load(channel);
+		}
 	}
 }
 
@@ -294,10 +313,14 @@ void chan_joining(nick_t *nick, char *chan) {
 	if(!(nick->umodes & UMODE_REGISTERED))
 		return;
 	
+	// skipping load time
+	if(!global_lib.sync)
+		return;
+	
 	// checking access	
 	sqlquery = sqlite3_mprintf(
 		"SELECT flags FROM cs_access "
-		"WHERE UPPER(channel) = UPPER('%q') "
+		"WHERE UPPER(channel) = UPPER('%q')"
 		"  AND UPPER(nick)    = UPPER('%q')",
 		chan, nick->nick
 	);

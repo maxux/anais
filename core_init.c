@@ -208,7 +208,6 @@ int main(void) {
 	/* Initializing global variables */
 	// settings variable
 	global_core.startup_time = time(NULL);
-	global_core.auth         = 0;
 	
 	/* signals */
 	signal_intercept(SIGSEGV, sighandler);

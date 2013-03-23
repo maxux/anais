@@ -127,17 +127,17 @@ allow_t nickserv_allow_protected(nick_t *nick) {
 	if((stmt = db_sqlite_select_query(sqlite_db, sqlquery))) {
 		while(sqlite3_step(stmt) == SQLITE_ROW) {
 			fingerprint = (char *) sqlite3_column_text(stmt, 0);
-			username    = (char *)  sqlite3_column_text(stmt, 1);
+			username    = (char *) sqlite3_column_text(stmt, 1);
 			
 			if(fingerprint) {
 				printf("[+] nickserv/allow: %s <> %s (%s)\n", 
 				       username, nick->user, fingerprint);
 
 				// deny
-				if(strcmp(username, nick->user))
-					allow = DISALLOW;
+				if(nick->fingerprint && !strcmp(nick->fingerprint, fingerprint))
+					allow = IDENTIFIED;
 					
-				else allow = IDENTIFIED;
+				else allow = DISALLOW;
 				
 			} else printf("[-] nickserv/allow: no fingerprint found\n");
 		}
@@ -657,9 +657,6 @@ void nickserv_fingerprint(nick_t *nick) {
 	char request[1024];
 	allow_t allow;
 	
-	if(strcmp(nick->class, FINGERPRINT_CLASS))
-		return;
-	
 	sqlquery = sqlite3_mprintf(
 		"SELECT fingerprint FROM ns_group WHERE username = '%q' "
 		"   AND fingerprint IS NOT NULL",
@@ -678,14 +675,14 @@ void nickserv_fingerprint(nick_t *nick) {
 			
 			zsnprintf(request, "CHGHOST %s %s", nick->nick, FINGERPRINT_VHOST);
 			raw_socket(request);
-			
-			// auto-ident
-			allow = nickserv_allow_protected(nick);
-			nickserv_allow_check(nick, allow);
 		}
 	
 	} else fprintf(stderr, "[-] nickserv/fingerprint: cannot select\n");
 	
 	sqlite3_free(sqlquery);
 	sqlite3_finalize(stmt);
+	
+	// auto-ident
+	allow = nickserv_allow_protected(nick);
+	nickserv_allow_check(nick, allow);
 }
