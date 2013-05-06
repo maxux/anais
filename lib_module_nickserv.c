@@ -714,8 +714,8 @@ void nickserv_ghost(nick_t *nick, char *data) {
 		ndest   = list_search(global_lib.nicks, str_nick1);
 	}
 	
-	// working
-	if(nsource && ndest) {
+	// if both nick are set and different
+	if(nsource && ndest && (strcmp(nsource->nick, ndest->nick))) {
 		// host match
 		if(!strcmp(nsource->host, ndest->host)) {
 			str_dest = strdup(ndest->nick);
