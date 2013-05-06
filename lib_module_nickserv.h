@@ -10,6 +10,7 @@
 	void nickserv_sslcert(nick_t *nick, char *data);
 	void nickserv_info(nick_t *nick, char *data);
 	void nickserv_help(nick_t *nick, char *data);
+	void nickserv_ghost(nick_t *nick, char *data);
 	void nickserv_query(nick_t *nick, char *data);
 	
 	// restore permissions, ...

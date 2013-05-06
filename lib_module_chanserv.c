@@ -143,8 +143,8 @@ void chanserv_register(nick_t *nick, char *data) {
 	hashed   = chanserv_passwd(channel->channel, password);
 	
 	sqlquery = sqlite3_mprintf(
-		"INSERT INTO cs_channel (channel, topic, owner, password) "
-		"VALUES ('%q', '%q', '%q', '%s')",
+		"INSERT INTO cs_channel (channel, topic, owner, password, rdate) "
+		"VALUES ('%q', '%q', '%q', '%s', datetime('now', 'localtime'))",
 		channel->channel, channel->topic.topic, nick->nick, hashed
 	);
 	
@@ -355,7 +355,7 @@ void chanserv_info(nick_t *nick, char *data) {
 	
 	// channel access
 	sqlquery = sqlite3_mprintf(
-		"SELECT owner, strftime('%%d/%%m/%%Y %%H:%%M:%%S', rdate, 'localtime') "
+		"SELECT owner, strftime('%%d/%%m/%%Y %%H:%%M:%%S', rdate) "
 		"FROM cs_channel WHERE UPPER(channel) = UPPER('%q')                    ",
 		chan
 	);

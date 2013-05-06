@@ -56,6 +56,7 @@ request_t __nickserv[] = {
 	{.name = "email",       .ucb = nickserv_email},
 	{.name = "group",       .ucb = nickserv_group},
 	{.name = "sslcert",     .ucb = nickserv_sslcert},
+	{.name = "ghost",       .ucb = nickserv_ghost},
 	{.name = "vhost",       .ucb = nickserv_vhost},
 	{.name = "info",        .ucb = nickserv_info},
 	{.name = "help",        .ucb = nickserv_help},
@@ -161,6 +162,9 @@ void nickserv_allow_check(nick_t *nick, allow_t allow) {
 		zsnprintf(fake, "anon%d", rand() / 1000);
 		zsnprintf(request, "SVSNICK %s %s :%ld", nick->nick, fake, time(NULL));
 		raw_socket(request);
+		
+		// syncing
+		// nick_change(nick, fake);
 		
 	} else if(allow == IDENTIFIED) {
 		printf("[-] nickserv/allow_check: identified\n");
@@ -437,14 +441,15 @@ void nickserv_group(nick_t *nick, char *data) {
 	
 	if(nickserv_user_identify(mainnick, pass)) {
 		sqlquery = sqlite3_mprintf(
-			"INSERT INTO ns_nick (nick, gid) "
-			"   SELECT '%q', gid FROM ns_nick WHERE nick = '%q'",
+			"INSERT INTO ns_nick (nick, gid, rdate, lastdate) "
+			"   SELECT '%q', gid, datetime('now', 'localtime'), datetime('now', 'localtime') "
+			"   FROM ns_nick WHERE nick = '%q'",
 			nick->nick, mainnick
 		);
 		
 		// updating password
 		if(db_sqlite_simple_query(sqlite_db, sqlquery)) {
-			irc_notice(nick->nick, "Nick groupped");
+			irc_notice(nick->nick, "Nick grouped");
 			nickserv_registred(nick);
 			
 		} else irc_notice(nick->nick, "Cannot update group");
@@ -685,4 +690,50 @@ void nickserv_fingerprint(nick_t *nick) {
 	// auto-ident
 	allow = nickserv_allow_protected(nick);
 	nickserv_allow_check(nick, allow);
+}
+
+void nickserv_ghost(nick_t *nick, char *data) {
+	char *str_nick1 = NULL, *str_nick2 = NULL;
+	char *str_dest = NULL;
+	nick_t *nsource, *ndest;
+	char rawdata[1024];
+	
+	if(nickserv_args_check(nick, data, 2, "GHOST dst-nick [source-nick]"))
+		return;
+	
+	// grab first nick
+	str_nick1 = string_index(data, 1);
+	
+	// got a second nick
+	if((str_nick2 = string_index(data, 2))) {
+		nsource = list_search(global_lib.nicks, str_nick1);
+		ndest   = list_search(global_lib.nicks, str_nick2);
+		
+	} else {
+		nsource = nick;
+		ndest   = list_search(global_lib.nicks, str_nick1);
+	}
+	
+	// working
+	if(nsource && ndest) {
+		// host match
+		if(!strcmp(nsource->host, ndest->host)) {
+			str_dest = strdup(ndest->nick);
+			
+			// killing
+			zsnprintf(rawdata, "KILL %s :ghost from %s", ndest->nick, nsource->nick);
+			raw_socket(rawdata);
+			nick_quit(ndest, NULL);
+			
+			// syncing
+			zsnprintf(rawdata, "SVSNICK %s %s :%ld", nsource->nick, str_dest, time(NULL));
+			raw_socket(rawdata);
+			nick_change(nsource, str_dest);
+			
+		} else fprintf(stderr, "[-] nickservn/ghost: %s/%s didn't match\n", nsource->host, ndest->host);
+	}
+	
+	free(str_nick1);
+	free(str_nick2);
+	free(str_dest);
 }
