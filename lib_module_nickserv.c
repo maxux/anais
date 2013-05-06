@@ -717,7 +717,9 @@ void nickserv_ghost(nick_t *nick, char *data) {
 	// if both nick are set and different
 	if(nsource && ndest && (strcmp(nsource->nick, ndest->nick))) {
 		// host match
-		if(!strcmp(nsource->host, ndest->host)) {
+		if(!strcmp(nsource->host, ndest->host) && 
+		   !strcmp(nsource->user, ndest->user) && 
+		   !strcmp(nsource->realname, ndest->realname)) {
 			str_dest = strdup(ndest->nick);
 			
 			// killing
