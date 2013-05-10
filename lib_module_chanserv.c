@@ -154,8 +154,8 @@ void chanserv_register(nick_t *nick, char *data) {
 		
 		// creating nick
 		sqlquery = sqlite3_mprintf(
-			"INSERT INTO cs_access (channel, nick, flags) VALUES "
-			"('%q', '%q', '+qo')",
+			"INSERT INTO cs_access (channel, gid, flags) VALUES "
+			"('%q', (SELECT gid FROM ns_nick WHERE nick = '%q'), '+qo')",
 			channel->channel, nick->nick
 		);
 		
@@ -224,7 +224,9 @@ void chanserv_access_show(channel_t *channel, nick_t *nick) {
 	printf("[+] chanserv: loading %s access\n", channel->channel);
 	
 	sqlquery = sqlite3_mprintf(
-		"SELECT nick, flags FROM cs_access WHERE UPPER(channel) = UPPER('%q')",
+		"SELECT n.nick, c.flags FROM cs_access c, ns_nick n "
+		"WHERE UPPER(c.channel) = UPPER('%q')               "
+		"  AND n.gid = c.gid                                ",
 		channel->channel
 	);
 	
@@ -292,7 +294,9 @@ void chanserv_access(nick_t *nick, char *data) {
 		printf("[+] chanserv/access: removing <%s> from access\n", user);
 		
 		sqlquery = sqlite3_mprintf(
-			"DELETE FROM cs_access WHERE channel = '%q' AND nick = '%q'",
+			"DELETE FROM cs_access "
+			"WHERE channel = '%q'  "
+			"  AND gid = (SELECT gid FROM ns_nick WHERE nick = '%q')",
 			channel->channel, user
 		);
 		
@@ -325,8 +329,8 @@ void chanserv_access(nick_t *nick, char *data) {
 		
 		if(!chan && *flags == '+') {
 			sqlquery = sqlite3_mprintf(
-				"REPLACE INTO cs_access (channel, nick, flags) VALUES "
-				"('%q', '%q', '%q')",
+				"REPLACE INTO cs_access (channel, gid, flags) VALUES "
+				"('%q', (SELECT gid FROM ns_nick WHERE nick = '%q'), '%q')",
 				channel->channel, user, flags
 			);
 			
@@ -356,7 +360,7 @@ void chanserv_info(nick_t *nick, char *data) {
 	// channel access
 	sqlquery = sqlite3_mprintf(
 		"SELECT owner, strftime('%%d/%%m/%%Y %%H:%%M:%%S', rdate) "
-		"FROM cs_channel WHERE UPPER(channel) = UPPER('%q')                    ",
+		"FROM cs_channel WHERE UPPER(channel) = UPPER('%q')       ",
 		chan
 	);
 	

@@ -55,6 +55,7 @@ request_t __nickserv[] = {
 	{.name = "password",    .ucb = nickserv_password},
 	{.name = "email",       .ucb = nickserv_email},
 	{.name = "group",       .ucb = nickserv_group},
+	{.name = "glist",       .ucb = nickserv_grouplist},
 	{.name = "sslcert",     .ucb = nickserv_sslcert},
 	{.name = "ghost",       .ucb = nickserv_ghost},
 	{.name = "vhost",       .ucb = nickserv_vhost},
@@ -281,7 +282,8 @@ void nickserv_restore(nick_t *nick) {
 	
 	// channel access
 	sqlquery = sqlite3_mprintf(
-		"SELECT channel, flags FROM cs_access WHERE UPPER(nick) = UPPER('%q')",
+		"SELECT c.channel, c.flags FROM cs_access c, ns_nick nick "
+		"WHERE UPPER(n.nick) = UPPER('%q') AND c.gid = n.gid",
 		nick->nick
 	);
 	
@@ -588,6 +590,38 @@ void nickserv_info(nick_t *nick, char *data) {
 		irc_notice(nick->nick, "No match found");
 }
 
+void nickserv_grouplist(nick_t *nick, char *data) {
+	sqlite3_stmt *stmt;
+	char *sqlquery, *nickname, *who;
+	char reply[1024];
+	
+	if(nickserv_args_check(nick, data, 2, "GLIST nick"))
+		return;
+	
+	who = string_index(data, 1);
+	
+	// channel access
+	sqlquery = sqlite3_mprintf(
+		"SELECT nick FROM ns_nick n WHERE n.gid = (                "
+		"  SELECT gid FROM ns_nick WHERE UPPER(nick) = UPPER('%q') "
+		")                                                         ",
+		who
+	);
+	
+	if((stmt = db_sqlite_select_query(sqlite_db, sqlquery))) {
+		while(sqlite3_step(stmt) == SQLITE_ROW) {
+			nickname = (char *) sqlite3_column_text(stmt, 0);			
+			zsnprintf(reply, "In the same group: %s",  nickname);
+			irc_notice(nick->nick, reply);
+		}
+	
+	} else fprintf(stderr, "[-] nickserv/info: cannot select\n");
+	
+	sqlite3_free(sqlquery);
+	sqlite3_finalize(stmt);
+	free(who);
+}
+
 void nickserv_sslcert(nick_t *nick, char *data) {
 	(void) data;
 	char *sqlquery, *fingerprint;
@@ -675,7 +709,7 @@ void nickserv_fingerprint(nick_t *nick) {
 			// saving fingerprint
 			nick->fingerprint = strdup(fp);
 			
-			zsnprintf(request, "SWHOIS %s :SHA-256 fingerprint: %s", nick->nick, fp);
+			zsnprintf(request, "SWHOIS %s :is using ssl certificate: [sha-256] %s", nick->nick, fp);
 			raw_socket(request);
 			
 			zsnprintf(request, "CHGHOST %s %s", nick->nick, FINGERPRINT_VHOST);

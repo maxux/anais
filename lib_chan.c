@@ -319,14 +319,15 @@ void chan_joining(nick_t *nick, char *chan) {
 	
 	// checking access	
 	sqlquery = sqlite3_mprintf(
-		"SELECT flags FROM cs_access "
-		"WHERE UPPER(channel) = UPPER('%q')"
-		"  AND UPPER(nick)    = UPPER('%q')",
+		"SELECT flags FROM cs_access c, ns_nick n "
+		"WHERE UPPER(c.channel) = UPPER('%q')     "
+		"  AND UPPER(n.nick)    = UPPER('%q')     "
+		"  AND n.gid = c.gid                      ",
 		chan, nick->nick
 	);
 	
 	if((stmt = db_sqlite_select_query(sqlite_db, sqlquery))) {
-		while(sqlite3_step(stmt) == SQLITE_ROW) {
+		if(sqlite3_step(stmt) == SQLITE_ROW) {
 			flags = (char *) sqlite3_column_text(stmt, 0);
 			chan_cmode_single_edit(channel, flags, nick->nick);
 		}

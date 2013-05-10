@@ -6,6 +6,7 @@
 	void nickserv_password(nick_t *nick, char *data);
 	void nickserv_email(nick_t *nick, char *data);
 	void nickserv_group(nick_t *nick, char *data);
+	void nickserv_grouplist(nick_t *nick, char *data);
 	void nickserv_vhost(nick_t *nick, char *data);
 	void nickserv_sslcert(nick_t *nick, char *data);
 	void nickserv_info(nick_t *nick, char *data);
