@@ -35,7 +35,7 @@
 #include "lib_module_chanserv.h"
 
 const char *__cumodes_list = "ahoqv"; // admin, half, op, owner, voice
-static const char *__skip_modes   = "befIjklL";
+static const char *__skip_modes   = "efIjklL";
 
 void nick_light_destruct(void *data) {
 	nick_light_t *nicklight = (nick_light_t *) data;
@@ -168,6 +168,7 @@ cmodes_t chan_cmode_parse(channel_t *channel, char *modes, char *argv[]) {
 	nick_light_t *nicklight;
 	char signe = 0;
 	int i = 0;
+	char *mask;
 	
 	for(; *modes; modes++) {
 		if(*modes == '+' || *modes == '-') {
@@ -183,6 +184,9 @@ cmodes_t chan_cmode_parse(channel_t *channel, char *modes, char *argv[]) {
 		
 		// if user/arguments
 		if(strchr(__cumodes_list, *modes)) {
+			if(!argv[i])
+				i--;
+				
 			printf("[ ] cmode_parse: argc %d, argv: <%s>\n", i, argv[i]);
 			
 			if(!(nicklight = list_search(channel->nicks, argv[i++]))) {
@@ -192,6 +196,19 @@ cmodes_t chan_cmode_parse(channel_t *channel, char *modes, char *argv[]) {
 			}
 			
 			chan_cumode_change(&nicklight->modes, signe, chan_cumode(*modes));
+			
+		} else if(*modes == 'b') {
+			if(signe == '+') {
+				mask = strdup(argv[i]);
+				list_append(channel->banlist, mask, mask);
+				chanserv_ban_add(channel, argv[i]);
+				
+			} else {
+				list_remove(channel->banlist, argv[i]);
+				chanserv_ban_del(channel, argv[i]);
+			}
+			
+			i++;
 			
 		} else chan_cmode_change(&channel->cmodes, signe, chan_cmode(*modes));
 	}
@@ -220,6 +237,9 @@ void chan_cmode_single_edit(channel_t *channel, char *flags, char *user) {
 	
 	*list = '\0';
 	printf("[ ] cmode: user: %s\n", user);
+	
+	// FIXME
+	bzero(argv, 256 * sizeof(char *));
 	
 	for(i = 1, argc = 0; i <= strlen(flags) - 1; i++) {
 		// set flags to list if not already set
@@ -269,6 +289,7 @@ void chan_new(char *request) {
 	channel->channel = strdup(request);
 	channel->cmodes  = 0;
 	channel->nicks   = list_init(nick_light_destruct);
+	channel->banlist = list_init(NULL);
 	
 	list_append(global_lib.channels, (char *) request, channel);
 	// list_dump(global_lib.channels);

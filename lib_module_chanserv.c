@@ -277,14 +277,14 @@ void chanserv_access(nick_t *nick, char *data) {
 	}
 	
 	user = string_index(data, 2);
-	if(!nickserv_user_exists(user)) {
-		irc_notice(nick->nick, "This user is not registered");
+	if(!strcmp(user, "*")) {
+		chanserv_access_show(channel, nick);
 		free(user);
 		return;
 	}
 	
-	if(!strcmp(user, "*")) {
-		chanserv_access_show(channel, nick);
+	if(!nickserv_user_exists(user)) {
+		irc_notice(nick->nick, "This user is not registered");
 		free(user);
 		return;
 	}
@@ -410,4 +410,44 @@ void chanserv_query(nick_t *nick, char *data) {
 	}
 	
 	free(request);
+}
+
+void chanserv_ban_add(channel_t *channel, char *mask) {
+	char *sqlquery;
+	
+	if(!(channel->cmodes & CMODE_REGISTERED))
+		return;
+	
+	sqlquery = sqlite3_mprintf(
+		"INSERT INTO cs_ban (channel, mask) VALUES ('%q', '%q')",
+		channel->channel, mask
+	);
+	
+	// creating group
+	if(db_sqlite_simple_query(sqlite_db, sqlquery))
+		printf("[+] channel %s ban %s: added\n", channel->channel, mask);
+		
+	else fprintf(stderr, "[-] channel %s ban %s: failed\n", channel->channel, mask);
+	
+	sqlite3_free(sqlquery);
+}
+
+void chanserv_ban_del(channel_t *channel, char *mask) {
+	char *sqlquery;
+	
+	if(!(channel->cmodes & CMODE_REGISTERED))
+		return;
+	
+	sqlquery = sqlite3_mprintf(
+		"DELETE FROM cs_ban WHERE channel = '%q' AND mask = '%q'",
+		channel->channel, mask
+	);
+	
+	// creating group
+	if(db_sqlite_simple_query(sqlite_db, sqlquery))
+		printf("[+] channel %s ban %s: removed\n", channel->channel, mask);
+		
+	else fprintf(stderr, "[-] channel %s ban %s: failed\n", channel->channel, mask);
+	
+	sqlite3_free(sqlquery);
 }

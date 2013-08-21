@@ -40,8 +40,33 @@
 #include "lib_list.h"
 #include "lib_core.h"
 #include "lib_nick.h"
+#include "lib_chan.h"
 #include "lib_admin.h"
 #include "lib_module_operserv.h"
+#include "lib_module_chanserv.h"
+
+void operserv_restore_channel_callback(void *_channel, void *dummy1, void *dummy2) {
+	(void) dummy1;
+	(void) dummy2;
+	channel_t *channel = (channel_t *) _channel;
+	
+	chanserv_load(channel);
+}
+
+void operserv_restore() {
+	list_iterate(global_lib.channels, operserv_restore_channel_callback, NULL, NULL);
+}
+
+void operserv_reload(char *option) {
+	channel_t *channel;
+	
+	if(!(channel = list_search(global_lib.channels, option))) {
+		fprintf(stderr, "[-] reload: channel <%s> not found\n", option);
+		return;
+	}
+	
+	chanserv_load(channel);
+}
 
 void operserv_query(nick_t *nick, char *data) {
 	char query[4096];
@@ -56,6 +81,18 @@ void operserv_query(nick_t *nick, char *data) {
 		if(!strncasecmp(data, "global ", 7)) {
 			zsnprintf(query, ":OperServ NOTICE $* :[%s] %s", nick->nick, data + 7);
 			raw_socket(query);
+			return;
+		}
+		
+		if(!strncasecmp(data, "restore ", 7)) {
+			/* restoring topic */
+			operserv_restore();			
+			return;
+		}
+		
+		if(!strncasecmp(data, "reload ", 7)) {
+			/* restoring topic */
+			operserv_reload(data + 7);
 			return;
 		}
 			

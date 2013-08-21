@@ -134,6 +134,8 @@ void handle_query(nick_t *nick, char *data) {
 	modrequest = strtolower(string_index(data, 0));
 	
 	for(i = 0; i < sizeof(__modules) / sizeof(modules_t); i++) {
+		printf("[ ] core: query: %s <> %s\n", __modules[i].name, modrequest);
+		
 		if(!strcmp(__modules[i].name, modrequest))
 			__modules[i].callback(nick, strchr(data + 1, ':') + 1);
 	}

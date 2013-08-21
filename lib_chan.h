@@ -53,6 +53,7 @@
 		char *channel;    // channel name
 		cmodes_t cmodes;  // channel mode
 		list_t *nicks;    // nick_lite_t
+		list_t *banlist;  // list of banned mask
 		
 		struct topic_t topic;
 		

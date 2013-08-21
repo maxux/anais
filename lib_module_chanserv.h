@@ -11,4 +11,7 @@
 	
 	void chanserv_load(channel_t *channel);
 	void chanserv_query(nick_t *nick, char *data);
+	
+	void chanserv_ban_add(channel_t *channel, char *mask);
+	void chanserv_ban_del(channel_t *channel, char *mask);
 #endif

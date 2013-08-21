@@ -282,7 +282,7 @@ void nickserv_restore(nick_t *nick) {
 	
 	// channel access
 	sqlquery = sqlite3_mprintf(
-		"SELECT c.channel, c.flags FROM cs_access c, ns_nick nick "
+		"SELECT c.channel, c.flags FROM cs_access c, ns_nick n "
 		"WHERE UPPER(n.nick) = UPPER('%q') AND c.gid = n.gid",
 		nick->nick
 	);
@@ -748,6 +748,12 @@ void nickserv_ghost(nick_t *nick, char *data) {
 		ndest   = list_search(global_lib.nicks, str_nick1);
 	}
 	
+	if(!nsource || !ndest) {
+		free(str_nick1);
+		free(str_nick2);
+		return;
+	}
+	
 	printf("[ ] nickserv/ghost: %s/%s/%s <> %s/%s/%s\n",
 	       nsource->host, nsource->user, nsource->realname, ndest->host, ndest->user, ndest->realname);
 	
@@ -768,7 +774,7 @@ void nickserv_ghost(nick_t *nick, char *data) {
 			raw_socket(rawdata);
 			nick_change(nsource, str_dest);
 			
-		} else fprintf(stderr, "[-] nickservn/ghost: %s/%s didn't match\n", nsource->host, ndest->host);
+		} else fprintf(stderr, "[-] nickserv/ghost: %s/%s didn't match\n", nsource->host, ndest->host);
 	}
 	
 	free(str_nick1);
