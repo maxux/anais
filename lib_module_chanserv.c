@@ -214,6 +214,23 @@ void chanserv_load(channel_t *channel) {
 	
 	sqlite3_free(sqlquery);
 	sqlite3_finalize(stmt);
+	
+	sqlquery = sqlite3_mprintf(
+		"SELECT mask FROM cs_ban WHERE UPPER(channel) = UPPER('%q')",
+		channel->channel
+	);
+	
+	if((stmt = db_sqlite_select_query(sqlite_db, sqlquery))) {
+		while(sqlite3_step(stmt) == SQLITE_ROW) {
+			flags = (char *) sqlite3_column_text(stmt, 0);
+			zsnprintf(temp, "MODE %s +b %s", channel->channel, flags);
+			raw_socket(temp);
+		}
+	
+	} else fprintf(stderr, "[-] chanserv/load: cannot select ban\n");
+	
+	sqlite3_free(sqlquery);
+	sqlite3_finalize(stmt);
 }
 
 void chanserv_access_show(channel_t *channel, nick_t *nick) {
