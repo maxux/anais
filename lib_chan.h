@@ -50,10 +50,11 @@
 	} topic_t;
 
 	typedef struct channel_t {
-		char *channel;    // channel name
-		cmodes_t cmodes;  // channel mode
-		list_t *nicks;    // nick_lite_t
-		list_t *banlist;  // list of banned mask
+		char *channel;      // channel name
+		cmodes_t cmodes;    // channel mode
+		list_t *nicks;      // nick_lite_t
+		list_t *banlist;    // list of banned (+b) mask
+		list_t *exceptlist; // list of excepted (+e) mask
 		
 		struct topic_t topic;
 		

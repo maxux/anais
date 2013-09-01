@@ -14,4 +14,7 @@
 	
 	void chanserv_ban_add(channel_t *channel, char *mask);
 	void chanserv_ban_del(channel_t *channel, char *mask);
+	
+	void chanserv_except_add(channel_t *channel, char *mask);
+	void chanserv_except_del(channel_t *channel, char *mask);
 #endif

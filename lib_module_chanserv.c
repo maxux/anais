@@ -215,6 +215,7 @@ void chanserv_load(channel_t *channel) {
 	sqlite3_free(sqlquery);
 	sqlite3_finalize(stmt);
 	
+	// restoring bans
 	sqlquery = sqlite3_mprintf(
 		"SELECT mask FROM cs_ban WHERE UPPER(channel) = UPPER('%q')",
 		channel->channel
@@ -231,6 +232,26 @@ void chanserv_load(channel_t *channel) {
 	
 	sqlite3_free(sqlquery);
 	sqlite3_finalize(stmt);
+	
+	// restoring excepts
+	sqlquery = sqlite3_mprintf(
+		"SELECT mask FROM cs_except WHERE UPPER(channel) = UPPER('%q')",
+		channel->channel
+	);
+	
+	if((stmt = db_sqlite_select_query(sqlite_db, sqlquery))) {
+		while(sqlite3_step(stmt) == SQLITE_ROW) {
+			flags = (char *) sqlite3_column_text(stmt, 0);
+			zsnprintf(temp, "MODE %s +e %s", channel->channel, flags);
+			raw_socket(temp);
+		}
+	
+	} else fprintf(stderr, "[-] chanserv/load: cannot select except\n");
+	
+	sqlite3_free(sqlquery);
+	sqlite3_finalize(stmt);
+	
+	
 }
 
 void chanserv_access_show(channel_t *channel, nick_t *nick) {
@@ -465,6 +486,47 @@ void chanserv_ban_del(channel_t *channel, char *mask) {
 		printf("[+] channel %s ban %s: removed\n", channel->channel, mask);
 		
 	else fprintf(stderr, "[-] channel %s ban %s: failed\n", channel->channel, mask);
+	
+	sqlite3_free(sqlquery);
+}
+
+
+void chanserv_except_add(channel_t *channel, char *mask) {
+	char *sqlquery;
+	
+	if(!(channel->cmodes & CMODE_REGISTERED))
+		return;
+	
+	sqlquery = sqlite3_mprintf(
+		"INSERT INTO cs_except (channel, mask) VALUES ('%q', '%q')",
+		channel->channel, mask
+	);
+	
+	// creating group
+	if(db_sqlite_simple_query(sqlite_db, sqlquery))
+		printf("[+] channel %s except %s: added\n", channel->channel, mask);
+		
+	else fprintf(stderr, "[-] channel %s except %s: failed\n", channel->channel, mask);
+	
+	sqlite3_free(sqlquery);
+}
+
+void chanserv_except_del(channel_t *channel, char *mask) {
+	char *sqlquery;
+	
+	if(!(channel->cmodes & CMODE_REGISTERED))
+		return;
+	
+	sqlquery = sqlite3_mprintf(
+		"DELETE FROM cs_except WHERE channel = '%q' AND mask = '%q'",
+		channel->channel, mask
+	);
+	
+	// creating group
+	if(db_sqlite_simple_query(sqlite_db, sqlquery))
+		printf("[+] channel %s except %s: removed\n", channel->channel, mask);
+		
+	else fprintf(stderr, "[-] channel %s except %s: failed\n", channel->channel, mask);
 	
 	sqlite3_free(sqlquery);
 }

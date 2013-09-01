@@ -35,7 +35,7 @@
 #include "lib_module_chanserv.h"
 
 const char *__cumodes_list = "ahoqv"; // admin, half, op, owner, voice
-static const char *__skip_modes   = "efIjklL";
+static const char *__skip_modes   = "fIjklL";
 
 void nick_light_destruct(void *data) {
 	nick_light_t *nicklight = (nick_light_t *) data;
@@ -196,7 +196,8 @@ cmodes_t chan_cmode_parse(channel_t *channel, char *modes, char *argv[]) {
 			}
 			
 			chan_cumode_change(&nicklight->modes, signe, chan_cumode(*modes));
-			
+		
+		// special handling for ban
 		} else if(*modes == 'b') {
 			if(signe == '+') {
 				mask = strdup(argv[i]);
@@ -206,6 +207,20 @@ cmodes_t chan_cmode_parse(channel_t *channel, char *modes, char *argv[]) {
 			} else {
 				list_remove(channel->banlist, argv[i]);
 				chanserv_ban_del(channel, argv[i]);
+			}
+			
+			i++;
+		
+		// special handling for except
+		} else if(*modes == 'e') {
+			if(signe == '+') {
+				mask = strdup(argv[i]);
+				list_append(channel->exceptlist, mask, mask);
+				chanserv_except_add(channel, argv[i]);
+				
+			} else {
+				list_remove(channel->exceptlist, argv[i]);
+				chanserv_except_del(channel, argv[i]);
 			}
 			
 			i++;
