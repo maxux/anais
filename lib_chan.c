@@ -301,10 +301,11 @@ void chan_new(char *request) {
 	if(!(channel = (channel_t *) calloc(1, sizeof(channel_t))))
 		diep("[-] calloc");
 	
-	channel->channel = strdup(request);
-	channel->cmodes  = 0;
-	channel->nicks   = list_init(nick_light_destruct);
-	channel->banlist = list_init(NULL);
+	channel->channel    = strdup(request);
+	channel->cmodes     = 0;
+	channel->nicks      = list_init(nick_light_destruct);
+	channel->banlist    = list_init(NULL);
+	channel->exceptlist = list_init(NULL);
 	
 	list_append(global_lib.channels, (char *) request, channel);
 	// list_dump(global_lib.channels);
