@@ -216,8 +216,8 @@ void main_core(char *data, char *request) {
 	}
 	
 	// special case
-	if(!strncmp(request, "SERVER", 6)) {
-		server_server(data);
+	if(!strncmp(data, "SERVER", 6)) {
+		server_server(data + 6);
 		return;
 	}
 	
